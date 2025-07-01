@@ -1,6 +1,6 @@
 import {Anthropic} from "@anthropic-ai/sdk";
 import {Client} from "@modelcontextprotocol/sdk/client/index.js";
-import {Tool,} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
+import {Tool, MessageParam} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import dotenv from "dotenv";
 
@@ -12,6 +12,7 @@ guardMissingAPIKey(ANTHROPIC_API_KEY);
 
 interface MCPClient {
     connectToServer: (serverScriptPath: string) => Promise<void>;
+    processQuery: (query: string) => Promise<string>;
 }
 
 class AnthropicMCPClient implements MCPClient {
@@ -54,9 +55,55 @@ class AnthropicMCPClient implements MCPClient {
             throw e;
         }
     }
+
+    async processQuery(query: string) {
+        const messages: MessageParam[] = [
+            {
+                role: "user",
+                content: query,
+            },
+        ];
+
+        const response = await this.anthropic.messages.create({
+            model: "claude-3-5-sonnet-20241022",
+            messages,
+            tools: this.tools,
+            max_tokens: 1000,
+        });
+
+        const finalText = [];
+
+        for (const content of response.content) {
+            if (content.type === "text") {
+                finalText.push(content.text);
+            } else if (content.type === "tool_use") {
+                const toolName = content.name;
+                const toolArgs = content.input as {[x: string]: unknown} | undefined;
+
+                const result = await this.mcp.callTool({
+                    name: toolName,
+                    arguments: toolArgs,
+                });
+                finalText.push(`[Calling tool: ${toolName} with args ${JSON.stringify(toolArgs)}]`);
+
+                messages.push({
+                    role: "user",
+                    content: result.content as string,
+                })
+
+                const response = await this.anthropic.messages.create({
+                    model: "claude-3-5-sonnet-20241022",
+                    messages,
+                    max_tokens: 1000,
+                })
+
+                finalText.push(response.content[0].type === "text" ? response.content[0].text : "");
+            }
+        }
+
+        return finalText.join("\n");
+    }
 }
-
-
 
 function getCommand(serverScriptPath: string) {
     guardWrongServerScriptExtension(serverScriptPath);
