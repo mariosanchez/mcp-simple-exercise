@@ -15,6 +15,7 @@ interface MCPClient {
     connectToServer: (serverScriptPath: string) => Promise<void>;
     processQuery: (query: string) => Promise<string>;
     chatLoop: () => Promise<void>;
+    cleanup: () => Promise<void>;
 }
 
 class AnthropicMCPClient implements MCPClient {
@@ -130,6 +131,10 @@ class AnthropicMCPClient implements MCPClient {
         } finally {
             rl.close();
         }
+    }
+
+    async cleanup() {
+        await this.mcp.close();
     }
 
 }
