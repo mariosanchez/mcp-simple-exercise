@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {CallToolResult} from "@modelcontextprotocol/sdk/types.js";
 import {z} from "zod";
 import WeatherHttpDataClient from "./weatherDataClient.js";
-import {WeatherDataClient} from "./types.js";
+import {Alert, Forecast, WeatherDataClient} from "./types.js";
 
 export function setUpServer({weatherDataClient = WeatherHttpDataClient()}: { weatherDataClient?: WeatherDataClient }) {
     const server = new McpServer({
@@ -29,7 +29,7 @@ export function setUpServer({weatherDataClient = WeatherHttpDataClient()}: { wea
                 return textResponse(("No active alerts for " + stateCode));
             }
 
-            return textResponse(`Active alerts for ${stateCode}:\n\n${alerts.join("\n")}`);
+            return textResponse(`Active alerts for ${stateCode}:\n\n${formatAlerts(alerts)}`);
         }
     )
 
@@ -51,11 +51,38 @@ export function setUpServer({weatherDataClient = WeatherHttpDataClient()}: { wea
                 return textResponse("No forecast data available for the specified location.");
             }
 
-            return textResponse(`Weather forecast for (${latitude}, ${longitude}):\n\n${forecast.join("\n")}`);
+            return textResponse(`Weather forecast for (${latitude}, ${longitude}):\n\n${formatForecasts(forecast)}`);
         }
     );
 
     return server
+}
+
+function formatAlerts(alerts: Alert[]) {
+    return alerts.map(alert => {
+        const props = alert;
+        return [
+          `Event: ${props.event || "Unknown"}`,
+          `Area: ${props.areaDescription || "Unknown"}`,
+          `Severity: ${props.severity || "Unknown"}`,
+          `Status: ${props.status || "Unknown"}`,
+          `Headline: ${props.headline || "No headline"}`,
+          "---",
+        ].join("\n");
+    }).join("\n")
+}
+
+function formatForecasts(forecasts: Forecast[]) { 
+    return (forecasts.map((period: Forecast) =>
+    [
+      `${period.name || "Unknown"}:`,
+      `Temperature: ${period.temperature || "Unknown"}°${period.temperatureUnit || "F"}`,
+      `Wind: ${period.windSpeed || "Unknown"} ${period.windDirection || ""}`,
+      `${period.shortForecast || "No forecast available"}`,
+      "---",
+    ].join("\n"),
+  ))
+  .join("\n");
 }
 
 function textResponse(alertsText: string): CallToolResult {
