@@ -3,6 +3,7 @@ import {Client} from "@modelcontextprotocol/sdk/client/index.js";
 import {Tool, MessageParam} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import {StdioClientTransport} from "@modelcontextprotocol/sdk/client/stdio.js";
 import dotenv from "dotenv";
+import * as readline from "node:readline/promises";
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ guardMissingAPIKey(ANTHROPIC_API_KEY);
 interface MCPClient {
     connectToServer: (serverScriptPath: string) => Promise<void>;
     processQuery: (query: string) => Promise<string>;
+    chatLoop: () => Promise<void>;
 }
 
 class AnthropicMCPClient implements MCPClient {
@@ -27,6 +29,7 @@ class AnthropicMCPClient implements MCPClient {
         });
         this.mcp = new Client({name: "mcp-client-cli", version: "1.0.0"});
     }
+
 
     async connectToServer(serverScriptPath: string) {
         try {
@@ -103,6 +106,32 @@ class AnthropicMCPClient implements MCPClient {
 
         return finalText.join("\n");
     }
+
+    // this should be a specific implementation of a chat loop passed as a construction dependency/collaborator
+    // will keep it simple for now
+    async chatLoop() {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+
+        try {
+            console.log("\nMCP Client Started!");
+            console.log("Type your queries or 'quit' to exit.");
+
+            while (true) {
+                const message = await rl.question("\nQuery: ");
+                if (message.toLowerCase() === "quit") {
+                    break;
+                }
+                const response = await this.processQuery(message);
+                console.log("\n" + response);
+            }
+        } finally {
+            rl.close();
+        }
+    }
+
 }
 
 function getCommand(serverScriptPath: string) {
