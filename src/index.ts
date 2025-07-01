@@ -7,7 +7,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 function setUpServer({ weatherDataClient = WeatherHttpDataClient() }: { weatherDataClient?: WeatherDataClient}) {
     const server = new McpServer({
-        name: "weathe",
+        name: "weather",
         version: "1.0.0",
         description: "A simple weather app that uses the National Weather Service API",
         capabilities: {
@@ -33,6 +33,30 @@ function setUpServer({ weatherDataClient = WeatherHttpDataClient() }: { weatherD
             return textReponse(`Active alerts for ${stateCode}:\n\n${alerts.join("\n")}`);
         }
     )
+
+    server.tool(
+        "get-forecast",
+        "Get weather forecast for a coordinate",
+        {
+            latitude: z.number().min(-90).max(90).describe("Latitude of the location"),
+            longitude: z
+                .number()
+                .min(-180)
+                .max(180)
+                .describe("Longitude of the location"),
+        },
+        async ({ latitude, longitude }) => {
+            const { data: forecast } = await weatherDataClient.getForecast({latitude, longitude});
+
+            if (forecast.length === 0) {
+                return textReponse("No forecast data available for the specified location.");
+            }
+
+            return textReponse(`Weather forecast for (${latitude}, ${longitude}):\n\n${forecast.join("\n")}`);
+        }
+    );
+
+    return server
 }
 
 const server = setUpServer({})
