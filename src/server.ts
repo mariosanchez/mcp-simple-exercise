@@ -59,7 +59,7 @@ export function setUpServer({weatherDataClient = WeatherHttpDataClient()}: { wea
 }
 
 function formatAlerts(alerts: Alert[]) {
-    return alerts.map(alert => {
+    return alerts.slice(0, 10).map(alert => {
         const props = alert;
         return [
           `Event: ${props.event || "Unknown"}`,
