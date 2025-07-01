@@ -2,11 +2,25 @@
   "name": "mcp-simple-exercise",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
+  "bin": {
+    "weather": "./build/index.js"
+  },
   "scripts": {
+    "build": "tsc && chmod 755 build/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": ["build"],
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.2",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.8",
+    "typescript": "^5.8.3"
+  }
 }
