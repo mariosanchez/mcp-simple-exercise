@@ -24,6 +24,6 @@ export type GetForecastResponse = {
 }
 
 export interface WeatherDataClient { 
-    getAlerts: () => GetAlertsResponse
-    getForecast: () => GetForecastResponse
+    getAlerts: (stateCode: string) => Promise<GetAlertsResponse>
+    getForecast: () => Promise<GetForecastResponse>
 }
