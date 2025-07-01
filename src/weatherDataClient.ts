@@ -1,12 +1,4 @@
-import { Alert, GetAlertsResponse, WeatherDataClient } from "./types.js";
-
-const NWS_API_BASE = "https://api.weather.gov";
-const USER_AGENT = "weather-app/1.0";
-
-const headers = {
-  "User-Agent": USER_AGENT,
-  Accept: "application/geo+json",
-};
+import { Alert, Forecast, GetAlertsResponse, WeatherDataClient } from "./types.js";
 
 interface AlertFeature {
   properties: {
@@ -22,7 +14,29 @@ interface AlertsResponse {
   features: AlertFeature[];
 }
 
+interface ForecastPeriod {
+  name?: string;
+  temperature?: number;
+  temperatureUnit?: string;
+  windSpeed?: string;
+  windDirection?: string;
+  shortForecast?: string;
+}
 
+interface ForecastResponse {
+  properties: {
+    periods: ForecastPeriod[];
+  };
+}
+
+interface PointsResponse {
+  properties: {
+    forecast?: string;
+  };
+}
+
+
+export const ERROR_FAIL_TO_FETCH_FORECAST = "Failed to fetch forecast";
 
 export default function WeatherHttpDataClient(): WeatherDataClient {
   return {
@@ -31,7 +45,7 @@ export default function WeatherHttpDataClient(): WeatherDataClient {
       const alertsData = await makeNWSRequest<AlertsResponse>(alertsUrl);
 
       if (!alertsData) {
-        throw new Error("Failed to fetch alerts");
+        throw new Error(ERROR_FAILED_TO_FETCH_ALERTS());
       }
 
       const alerts = mapFetchedDataToAlert(alertsData);
@@ -41,12 +55,37 @@ export default function WeatherHttpDataClient(): WeatherDataClient {
       };
     },
 
-    getForecast: async () => {
+    getForecast: async ({latitude, longitude}) => {
+      const pointsUrl = `${NWS_API_BASE}/points/${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+      const pointsData = await makeNWSRequest<PointsResponse>(pointsUrl);
+
+      if (!pointsData) {
+        throw new Error(ERROR_FAIL_TO_FETCH_FORECAST);
+      }
+
+      const forecastUrl = pointsData.properties?.forecast;
+
+      if (!forecastUrl) {
+        throw new Error(ERROR_FAIL_TO_FETCH_FORECAST);
+      }
+
+      const forecastData = await makeNWSRequest<ForecastResponse>(forecastUrl);
+
+      if (!forecastData) {
+        throw new Error(ERROR_FAIL_TO_FETCH_FORECAST);
+      }
+      
+      const forecast = mapFetchedDataToForecast(forecastData);
+
       return {
-        data: [],
+        data: forecast,
       };
     },
   };
+}
+
+function ERROR_FAILED_TO_FETCH_ALERTS(): string | undefined {
+  return "Failed to fetch alerts";
 }
 
 function mapFetchedDataToAlert(alertsData: AlertsResponse): Alert[] {
@@ -58,6 +97,23 @@ function mapFetchedDataToAlert(alertsData: AlertsResponse): Alert[] {
     headline: feature.properties.headline || "",
   }));
 }
+
+const ABSOLUTE_ZERO = -273.15;
+
+function mapFetchedDataToForecast(forecastData: ForecastResponse): Forecast[] {
+  return forecastData.properties.periods.map((period) => ({
+    name: period.name || "",
+    temperature: period.temperature || ABSOLUTE_ZERO,
+    temperatureUnit: period.temperatureUnit || "",
+    windSpeed: period.windSpeed || "",
+    windDirection: period.windDirection || "",
+    shortForecast: period.shortForecast || "",
+  }));
+}
+
+
+const NWS_API_BASE = "https://api.weather.gov";
+const USER_AGENT = "weather-app/1.0";
 
 async function makeNWSRequest<T>(url: string): Promise<T | null> {
   const headers = {

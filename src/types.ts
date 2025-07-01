@@ -6,7 +6,7 @@ export type Alert = {
     headline: string
 }
 
-export type ForecastPeriod = {
+export type Forecast = {
     name: string
     temperature: number
     temperatureUnit: string
@@ -20,10 +20,15 @@ export type GetAlertsResponse = {
 }
 
 export type GetForecastResponse = {
-    data: ForecastPeriod[]
+    data: Forecast[]
+}
+
+type Coordinate = {
+    latitude: number,
+    longitude: number,
 }
 
 export interface WeatherDataClient { 
     getAlerts: (stateCode: string) => Promise<GetAlertsResponse>
-    getForecast: () => Promise<GetForecastResponse>
+    getForecast: (coordinate: Coordinate) => Promise<GetForecastResponse>
 }
