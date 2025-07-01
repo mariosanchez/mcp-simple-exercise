@@ -1,4 +1,4 @@
-import { Alert, Forecast, GetAlertsResponse, WeatherDataClient } from "./types.js";
+import { Alert, Forecast, WeatherDataClient } from "./types.js";
 
 interface AlertFeature {
   properties: {
